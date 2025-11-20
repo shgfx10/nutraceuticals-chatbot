@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nutraceutical Insight Bot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #chat-window::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-window::-webkit-scrollbar-thumb {
+            background-color: #a7a9be;
+            border-radius: 4px;
+        }
+        #chat-window::-webkit-scrollbar-track {
+            background-color: #f0f2f5;
+        }
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #65a30d;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: bounce 0.8s infinite alternate;
+        }
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-8px); }
+        }
+        .nutra-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f2f5;
+            font-family: 'Inter', sans-serif;
+        }
+        #chat-window {
+            height: calc(100vh - 160px);
+        }
+        @media (min-width: 768px) {
+            .nutra-container {
+                padding: 20px;
+                background-color: #e5e7eb;
+            }
+            .chat-box {
+                max-width: 800px;
+                height: 90vh;
+                margin: auto;
+            }
+            #chat-window {
+                height: calc(90vh - 160px);
+            }
+        }
+        .bot-bubble strong {
+            font-weight: 700;
+        }
+        .bot-bubble a {
+            color: #16a34a;
+            text-decoration: underline;
+        }
+        .bot-bubble a:hover {
+            color: #14532d;
+        }
+        .bot-bubble h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+        .bot-bubble h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }
+        .bot-bubble h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 6px;
+            margin-bottom: 3px;
+        }
+        .bot-bubble ul {
+            list-style-type: disc;
+            padding-left: 20px;
+            margin-top: 5px;
+            margin-bottom: 5px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body class="nutra-container">
+
+    <div class="chat-box w-full mx-auto shadow-2xl rounded-xl bg-white flex flex-col overflow-hidden">
+        <header class="p-4 bg-green-600 text-white shadow-lg flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 21 2 22 4c-1.2 5.5-7.5 7.5-12 5.5z"/>
+                    <path d="M2 22s1-3.5 2-4.5c.5-.5 1-1.5 1-2.5s-1.1-2.2-2.3-3.1C2 10.9 2 8 2 6c.5-.5 1-1.5 1-2.5s-.8-2.2-2-3.1c-1.2-1.2-1.5-3-1.5-5.5z"/>
+                </svg>
+                Nutraceutical AI Analyst
+            </h1>
+        </header>
+
+        <div id="chat-window" class="flex-grow p-4 space-y-4 overflow-y-auto">
+            <div class="flex justify-start">
+                <div class="bg-lime-100 text-green-800 p-3 rounded-xl rounded-tl-none max-w-xs md:max-w-md shadow-md bot-bubble">
+                    <p class="font-semibold mb-1">Welcome!</p>
+                    <p class="text-sm">I'm here to provide evidence-based insights on functional foods, dietary supplements, and health claims. Ask me anything, like **"What are the benefits of Omega-3 fatty acids?"** or **"What are the common sources of Vitamin D?"**</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-gray-200 flex items-center">
+            <div id="typing-indicator" class="typing-indicator hidden mr-3">
+                <span></span><span></span><span></span>
+            </div>
+            <textarea id="user-input" rows="1" class="flex-grow resize-none p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition duration-150 shadow-inner mr-3" placeholder="Ask your nutraceutical question..."></textarea>
+            <button id="send-button" onclick="sendMessage()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-300 transform hover:scale-105 disabled:bg-green-400 disabled:shadow-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 00.183.323l.147.169A1 1 0 003 17h14a1 1 0 00.894-1.447l-7-14z" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // CRITICAL: Your actual Gemini API Key is inserted below.
+        const API_KEY = "AIzaSyDBrtPC_xIDYymXfUVHXpEjeRBOAeCNKLY"; 
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
+        
+        const chatWindow = document.getElementById('chat-window');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const typingIndicator = document.getElementById('typing-indicator');
+
+        const MAX_RETRIES = 5;
+
+        function markdownToHtml(markdown) {
+            let html = markdown;
+
+            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                       .replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+            html = html.replace(/^### (.*)/gm, '<h4>$1</h4>');
+            html = html.replace(/^## (.*)/gm, '<h3>$1</h3>');
+            html = html.replace(/^# (.*)/gm, '<h2>$1</h2>');
+
+            const listItems = [];
+            html = html.split('\n').map(line => {
+                if (line.trim().startsWith('- ')) {
+                    listItems.push(`<li class="ml-4 list-disc">${line.substring(2).trim()}</li>`);
+                    return '';
+                }
+                return line;
+            }).join('\n');
+
+            if (listItems.length > 0) {
+                const listHtml = `<ul class="pl-4 py-1 space-y-1">${listItems.join('')}</ul>`;
+                const firstListItemIndex = markdown.indexOf('- ');
+                if (firstListItemIndex !== -1) {
+                    html = html.substring(0, firstListItemIndex) + listHtml + html.substring(firstListItemIndex);
+                } else {
+                    html += listHtml;
+                }
+            }
+
+
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = html.replace(/\n/g, '<br>');
+
+
+            return `<div>${html}</div>`;
+        }
+
+        function displayError(message) {
+            const errorHtml = `
+                <div class="bg-red-100 text-red-700 p-3 rounded-xl rounded-tl-none max-w-md shadow-md">
+                    <p class="font-bold mb-1">Connection Error:</p>
+                    <p class="text-sm">${message}</p>
+                </div>
+            `;
+            const messageContainer = document.createElement('div');
+            messageContainer.className = 'flex justify-start';
+            messageContainer.innerHTML = errorHtml;
+            chatWindow.appendChild(messageContainer);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+
+        function appendMessage(role, text, sources = []) {
+            const messageContainer = document.createElement('div');
+            messageContainer.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `p-3 rounded-xl max-w-xs md:max-w-md shadow-md text-sm transition-all duration-300 ease-in-out`;
+            
+            messageBubble.classList.add('bot-bubble'); 
+
+            if (role === 'user') {
+                messageBubble.classList.add('bg-green-600', 'text-white', 'rounded-br-none');
+                messageBubble.innerHTML = `<p class="mb-1">${text}</p>`;
+            } else {
+                messageBubble.classList.add('bg-lime-100', 'text-green-800', 'rounded-tl-none');
+                
+                const contentHtml = markdownToHtml(text);
+                messageBubble.innerHTML = contentHtml;
+
+                if (sources.length > 0) {
+                    const sourcesDiv = document.createElement('div');
+                    sourcesDiv.className = 'mt-3 pt-3 border-t border-lime-300 text-xs text-green-700';
+                    sourcesDiv.innerHTML = '<p class="font-bold mb-1">Sources:</p>';
+                    
+                    const sourceList = document.createElement('ul');
+                    sourceList.className = 'list-disc list-inside space-y-1 pl-4';
+
+                    const uniqueSources = new Set();
+                    sources.forEach(source => {
+                        if (source.uri && !uniqueSources.has(source.uri)) {
+                            uniqueSources.add(source.uri);
+                            const listItem = document.createElement('li');
+                            const link = document.createElement('a');
+                            link.href = source.uri;
+                            link.target = "_blank";
+                            link.className = "hover:underline hover:text-green-900";
+                            link.textContent = source.title || new URL(source.uri).hostname;
+                            listItem.appendChild(link);
+                            sourceList.appendChild(listItem);
+                        }
+                    });
+                    
+                    sourcesDiv.appendChild(sourceList);
+                    messageBubble.appendChild(sourcesDiv);
+                }
+            }
+
+            messageContainer.appendChild(messageBubble);
+            chatWindow.appendChild(messageContainer);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        async function fetchWithBackoff(url, options, retries = 0) {
+            try {
+                const response = await fetch(url, options);
+                
+                if (response.status === 400 || response.status === 403) {
+                     const errorText = await response.text();
+                     if (errorText.includes("API_KEY_INVALID") || errorText.includes("API key not valid")) {
+                         throw new Error("API_KEY_INVALID_FATAL");
+                     }
+                     throw response;
+                }
+
+                if (!response.ok) {
+                    if (response.status === 429 || (response.status >= 500 && response.status < 600)) {
+                        throw new Error(`Server error: ${response.status}`);
+                    }
+                    throw response;
+                }
+                return response;
+            } catch (error) {
+                if (error.message === "API_KEY_INVALID_FATAL") {
+                    throw error;
+                }
+                
+                if (retries < MAX_RETRIES && (error instanceof Error || error.status === 429 || error.status >= 500)) {
+                    const delay = Math.pow(2, retries) * 1000 + Math.random() * 500;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithBackoff(url, options, retries + 1);
+                }
+                
+                throw error;
+            }
+        }
+
+        async function generateContent(userQuery) {
+            if (API_KEY === "INSERT_YOUR_API_KEY_HERE" || API_KEY === "") {
+                throw new Error("Please set your Gemini API Key in the script.");
+            }
+
+            const systemPrompt = "You are a world-class Nutraceutical Analyst. Your purpose is to provide highly accurate, evidence-based, and easy-to-understand information about dietary supplements, functional foods, and health ingredients. You must be concise, informative, and always base your answers on the current knowledge you retrieve via search grounding. State facts, benefits, dosage considerations, or potential side effects clearly and logically. Use markdown for formatting, including bold text, lists, and links. Structure your response into clear paragraphs or bullet points.";
+
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: userQuery }] }],
+                tools: [{ "google_search": {} }], 
+                config: {
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    temperature: 0.2, 
+                }
+            };
+
+            const options = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            };
+
+            const response = await fetchWithBackoff(API_URL, options);
+            const result = await response.json();
+            
+            const candidate = result.candidates?.[0];
+
+            if (candidate && candidate.content?.parts?.[0]?.text) {
+                const text = candidate.content.parts[0].text;
+                let sources = [];
+                
+                const groundingMetadata = candidate.groundingMetadata;
+                if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                    sources = groundingMetadata.groundingAttributions
+                        .map(attribution => ({
+                            uri: attribution.web?.uri,
+                            title: attribution.web?.title,
+                        }))
+                        .filter(source => source.uri && source.title);
+                }
+                
+                return { text, sources };
+
+            } else if (result.error) {
+                throw new Error(result.error.message || "An unknown API error occurred.");
+            } else {
+                return { text: "I apologize, but I received an empty or malformed response. The model may have blocked the content. Please try rephrasing your question.", sources: [] };
+            }
+        }
+
+        async function sendMessage() {
+            const userQuery = userInput.value.trim();
+            if (userQuery === "") return;
+
+            appendMessage('user', userQuery);
+            userInput.value = '';
+            
+            sendButton.disabled = true;
+            userInput.disabled = true;
+            typingIndicator.classList.remove('hidden');
+
+            try {
+                const { text, sources } = await generateContent(userQuery);
+                appendMessage('bot', text, sources);
+
+            } catch (error) {
+                let errorMessage = "I encountered a severe error. Please check the browser console for details.";
+
+                if (error.message.includes("API_KEY_INVALID_FATAL") || error.message.includes("API Key")) {
+                    errorMessage = "🛑 **API Key Error:** Please make sure your Gemini API key is valid and correctly placed in the script.";
+                } else if (error.message.includes("blocked")) {
+                    errorMessage = "The content of your request was blocked by the safety settings. Please rephrase your question.";
+                } else if (error.message.includes("Server error")) {
+                    errorMessage = "The server is busy or unreachable. Please wait a moment and try again.";
+                }
+
+                displayError(errorMessage);
+            } finally {
+                typingIndicator.classList.add('hidden');
+                sendButton.disabled = false;
+                userInput.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        userInput.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        userInput.style.height = 'auto';
+        userInput.style.height = (userInput.scrollHeight) + 'px';
+
+    </script>
+</body>
+</html>
